@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Controller;
 
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -10,31 +12,26 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class EnderecoController extends AbstractController
 {
-
-    private mixed $adapterRedis;
-
-    public function __construct( private HttpClientInterface $client) {
-        $this->adapterRedis = RedisAdapter::createConnection("redis://localhost:6379",[
-        
-        ]);
+    public function __construct( private HttpClientInterface $client) 
+    {
     }
 
     #[Route('/endereco/{cep}', name: 'app_endereco', methods:"GET")]
     public function index(string $cep): JsonResponse
     {
-        $cache = new RedisAdapter(
-            redis: $this->adapterRedis,
+        $redis = RedisAdapter::createConnection("redis://localhost:6379");        
+     
+        $cacheRedis = new RedisAdapter(
+            redis:$redis,
             namespace: '',
             defaultLifetime: 60*60*24
         );
-        
-        $res = $cache->get($cep, function () use ($cep){
-            $viaCep= $this->client->request("GET","https://viacep.com.br/ws/{$cep}/json/");
+
+        $res = $cacheRedis->get($cep, function () use ($cep){
+            $viaCep = $this->client->request("GET","https://viacep.com.br/ws/{$cep}/json/");
             return $viaCep->toArray(); 
         });
 
         return $this->json($res); 
     }
-
-
 }
